@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, Image, Keyboard, Alert } from "react-native";
 import {
   MapPin,
@@ -23,6 +23,7 @@ import { Input } from "@/components/input";
 import { Modal } from "@/components/modal";
 import { Calendar } from "@/components/calendar";
 import { GuestEmail } from "@/components/email";
+import { Loading } from "@/components/loading";
 
 enum StepForm {
   TRIP_DETAILS = 1,
@@ -36,8 +37,9 @@ enum MODAL {
 }
 
 export default function Index() {
-//LOADING
-const [isCreatingTrip, setIsCreatingTrip ] = useState(false)
+  //LOADING
+  const [isCreatingTrip, setIsCreatingTrip] = useState(false);
+  const [isGettingTrip, setIsGettingTrip] = useState(true);
 
   //DATA
   const [stepForm, setStepForm] = useState(StepForm.TRIP_DETAILS);
@@ -72,15 +74,16 @@ const [isCreatingTrip, setIsCreatingTrip ] = useState(false)
       return setStepForm(StepForm.ADD_EMAIL);
     }
 
-    Alert.alert("Nova viagem", "Confirmar viagem?", [{
+    Alert.alert("Nova viagem", "Confirmar viagem?", [
+      {
         text: "Não",
-        style: "cancel"
-    },
-    {
+        style: "cancel",
+      },
+      {
         text: "Sim",
-        onPress: createTrip
-    }
-])
+        onPress: createTrip,
+      },
+    ]);
   }
 
   function handleSelectDate(selectedDay: DateData) {
@@ -129,27 +132,55 @@ const [isCreatingTrip, setIsCreatingTrip ] = useState(false)
     }
   }
 
-  async function createTrip(){
+  async function createTrip() {
     try {
-        setIsCreatingTrip(true)
+      setIsCreatingTrip(true);
 
-        const newTrip = await tripServer.create({
-            destination,
-            starts_at: dayjs(selectedDates.startsAt?.dateString).toString(),
-            ends_at: dayjs(selectedDates.endsAt?.dateString).toString(),
-            emails_to_invite: emailsToInvite
-        })
+      const newTrip = await tripServer.create({
+        destination,
+        starts_at: dayjs(selectedDates.startsAt?.dateString).toString(),
+        ends_at: dayjs(selectedDates.endsAt?.dateString).toString(),
+        emails_to_invite: emailsToInvite,
+      });
 
-        Alert.alert("Nova viagem", "Viagem criada com sucesso!", [
-            {
-            text: "Ok. Continuar.",
-            onPress: () => saveTrip(newTrip.tripId)
-        }
-    ])
+      Alert.alert("Nova viagem", "Viagem criada com sucesso!", [
+        {
+          text: "Ok. Continuar.",
+          onPress: () => saveTrip(newTrip.tripId),
+        },
+      ]);
     } catch (error) {
-        console.log(error);
-        setIsCreatingTrip(false)   
+      console.log(error);
+      setIsCreatingTrip(false);
     }
+  }
+
+  async function getTrip() {
+    try {
+      const tripId = await tripStorage.get();
+
+      if (!tripId) {
+        return setIsGettingTrip(false);
+      }
+
+      const trip = await tripServer.getById(tripId);
+      console.log(trip);
+
+      if (trip) {
+        return router.navigate("trip/" + trip.id);
+      }
+    } catch (error) {
+      setIsCreatingTrip(false);
+      console.log(error);
+    }
+  }
+
+  useEffect(() => {
+    getTrip();
+  }, []);
+
+  if (isGettingTrip) {
+    return <Loading />;
   }
 
   return (
