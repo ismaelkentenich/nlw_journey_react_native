@@ -37,9 +37,9 @@ enum MODAL {
 }
 
 export default function Index() {
-  //LOADING
-  const [isCreatingTrip, setIsCreatingTrip] = useState(false);
-  const [isGettingTrip, setIsGettingTrip] = useState(true);
+//LOADING
+const [isCreatingTrip, setIsCreatingTrip ] = useState(false)
+const [isGettingTrip, setIsGettingTrip] = useState(true)
 
   //DATA
   const [stepForm, setStepForm] = useState(StepForm.TRIP_DETAILS);
@@ -74,16 +74,15 @@ export default function Index() {
       return setStepForm(StepForm.ADD_EMAIL);
     }
 
-    Alert.alert("Nova viagem", "Confirmar viagem?", [
-      {
+    Alert.alert("Nova viagem", "Confirmar viagem?", [{
         text: "Não",
-        style: "cancel",
-      },
-      {
+        style: "cancel"
+    },
+    {
         text: "Sim",
-        onPress: createTrip,
-      },
-    ]);
+        onPress: createTrip
+    }
+])
   }
 
   function handleSelectDate(selectedDay: DateData) {
@@ -132,55 +131,60 @@ export default function Index() {
     }
   }
 
-  async function createTrip() {
+  async function createTrip(){
     try {
-      setIsCreatingTrip(true);
+        setIsCreatingTrip(true)
 
-      const newTrip = await tripServer.create({
-        destination,
-        starts_at: dayjs(selectedDates.startsAt?.dateString).toString(),
-        ends_at: dayjs(selectedDates.endsAt?.dateString).toString(),
-        emails_to_invite: emailsToInvite,
-      });
+        const newTrip = await tripServer.create({
+            destination,
+            starts_at: dayjs(selectedDates.startsAt?.dateString).toString(),
+            ends_at: dayjs(selectedDates.endsAt?.dateString).toString(),
+            emails_to_invite: emailsToInvite
+        })
 
-      Alert.alert("Nova viagem", "Viagem criada com sucesso!", [
-        {
-          text: "Ok. Continuar.",
-          onPress: () => saveTrip(newTrip.tripId),
-        },
-      ]);
+        Alert.alert("Nova viagem", "Viagem criada com sucesso!", [
+            {
+            text: "Ok. Continuar.",
+            onPress: () => saveTrip(newTrip.tripId)
+        }
+    ])
     } catch (error) {
-      console.log(error);
-      setIsCreatingTrip(false);
+        console.log(error);
+        setIsCreatingTrip(false)   
     }
   }
 
   async function getTrip() {
     try {
-      const tripId = await tripStorage.get();
+      const tripId = await tripStorage.get()
 
-      if (!tripId) {
-        return setIsGettingTrip(false);
+      if(!tripId){
+        return setIsGettingTrip(false)
       }
 
-      const trip = await tripServer.getById(tripId);
+      const trip = await tripServer.getById(tripId)
       console.log(trip);
+      
 
-      if (trip) {
-        return router.navigate("trip/" + trip.id);
+      if(trip){
+        return router.navigate("trip/" + trip.id)
       }
+
+
     } catch (error) {
-      setIsCreatingTrip(false);
+      setIsCreatingTrip(false)
       console.log(error);
+      
     }
+
   }
-
+  
   useEffect(() => {
-    getTrip();
-  }, []);
+    getTrip()
+  }, [])
 
-  if (isGettingTrip) {
-    return <Loading />;
+  if(isGettingTrip){
+    return <Loading />
   }
 
   return (
