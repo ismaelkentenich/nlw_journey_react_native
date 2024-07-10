@@ -20,7 +20,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#09090B"
       },
-      "package": "com.ismaelkentenich.planner"
+      "package": "com.ismaelandrade.planner"
     },
     "web": {
       "bundler": "metro",
