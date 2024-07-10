@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Alert, Keyboard, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Alert, Keyboard, Text, View, SectionList } from "react-native";
 import {
   PlusIcon,
   Tag,
@@ -15,6 +15,8 @@ import { Input } from "@/components/input";
 import { Calendar } from "@/components/calendar";
 import dayjs from "dayjs";
 import { activitiesServer } from "@/server/activities-server";
+import { Activity, ActivityProps } from "@/components/activity";
+import { Loading } from "@/components/loading";
 
 type Props = {
   tripDetails: TripData;
@@ -26,23 +28,35 @@ enum MODAL {
   NEW_ACTIVITY = 2,
 }
 
+type TripActivities = {
+  title: {
+    dayNumber: number;
+    dayName: string;
+  };
+  data: ActivityProps[];
+};
+
 export function Activities({ tripDetails }: Props) {
   //MODAL
   const [showModal, setShowModal] = useState(MODAL.NONE);
 
   //LOADING
   const [isCreatingActivity, setIsCreatingActivity] = useState(false);
+  const [isLoadingActivities, setIsLoadingActivities] = useState(true);
 
   //DATA
   const [activityTitle, setActivityTitle] = useState("");
   const [activityDate, setActivityDate] = useState("");
   const [activityHour, setActivityHour] = useState("");
 
-  function resetNewActivityFields(){
-    setActivityTitle("")
-    setActivityDate("")
-    setActivityHour("")
-    setShowModal(MODAL.NONE)
+  //LIST
+  const [tripActivities, setTripActivities] = useState<TripActivities[]>([]);
+
+  function resetNewActivityFields() {
+    setActivityTitle("");
+    setActivityDate("");
+    setActivityHour("");
+    setShowModal(MODAL.NONE);
   }
 
   async function handleCreateTripActivity() {
@@ -54,19 +68,54 @@ export function Activities({ tripDetails }: Props) {
 
       await activitiesServer.create({
         tripId: tripDetails.id,
-        occurs_at: dayjs(activityDate).add(Number(activityHour), "h").toString(),
-        title: activityTitle
-      })
+        occurs_at: dayjs(activityDate)
+          .add(Number(activityHour), "h")
+          .toString(),
+        title: activityTitle,
+      });
 
-      Alert.alert("Nova atividade", "Nova atividade cadastrada com sucesso!")
-      resetNewActivityFields()
+      Alert.alert("Nova atividade", "Nova atividade cadastrada com sucesso!");
 
+      await getTripActivities();
+      resetNewActivityFields();
     } catch (error) {
       console.log(error);
     } finally {
       setIsCreatingActivity(false);
     }
   }
+
+  async function getTripActivities() {
+    try {
+      const activities = await activitiesServer.getActivitiesByTripId(
+        tripDetails.id
+      );
+
+      const activitiesToSectionList = activities.map((dayActivity) => ({
+        title: {
+          dayNumber: dayjs(dayActivity.date).date(),
+          dayName: dayjs(dayActivity.date).format("dddd").replace("-feira", ""),
+        },
+        data: dayActivity.activities.map((activity) => ({
+          id: activity.id,
+          title: activity.title,
+          hour: dayjs(activity.occurs_at).format("hh[:]mm[h]"),
+          isBefore: dayjs(activity.occurs_at).isBefore(dayjs()),
+        })),
+      }));
+
+      setTripActivities(activitiesToSectionList);
+      // console.log(activitiesToSectionList);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsLoadingActivities(false);
+    }
+  }
+
+  useEffect(() => {
+    getTripActivities();
+  }, []);
 
   return (
     <View className="flex-1">
@@ -81,6 +130,38 @@ export function Activities({ tripDetails }: Props) {
             <Button.Title>Nova atividade</Button.Title>
           </Button>
         </View>
+      </View>
+
+      <View className="mt-4">
+        {isLoadingActivities ? (
+          <Loading />
+        ) : (
+          <SectionList
+            sections={tripActivities}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => <Activity data={item} />}
+            renderSectionHeader={({ section }) => (
+              <View className="w-full">
+                <Text className="text-white text-2xl font-semibold py-2">
+                  {" "}
+                  Dia {section.title.dayNumber + " "}
+                  <Text className="text-zinc-500 text-base font-regular capitalize">
+                    {" "}
+                    {section.title.dayName}{" "}
+                  </Text>
+                </Text>
+
+                {section.data.length === 0 && (
+                  <Text className="text-zinc-500 font-regular text-sm mb-8">
+                    Nenhuma atividade cadastrada nessa data.
+                  </Text>
+                )}
+              </View>
+            )}
+            contentContainerClassName="gap-3 pb-48"
+            showsVerticalScrollIndicator={false}
+          />
+        )}
       </View>
 
       <Modal
@@ -134,10 +215,12 @@ export function Activities({ tripDetails }: Props) {
             </View>
           </View>
           <View className="mt-4">
-          <Button onPress={handleCreateTripActivity} isLoading={isCreatingActivity}>
-            <Button.Title>Salvar atividade</Button.Title>
-          </Button>
-
+            <Button
+              onPress={handleCreateTripActivity}
+              isLoading={isCreatingActivity}
+            >
+              <Button.Title>Salvar atividade</Button.Title>
+            </Button>
           </View>
         </View>
       </Modal>
